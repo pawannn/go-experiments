@@ -13,7 +13,7 @@ func main() {
 
 	fmt.Println(token)
 
-	claims, err := VerifyToken(token)
+	claims, err := ParseToken(token)
 	if err != nil {
 		log.Fatal(err)
 	}
