@@ -101,7 +101,7 @@ func FanIn[T any, K any](done <-chan T, inChans ...<-chan K) <-chan K {
 	return stream
 }
 
-func main() {
+func StartFan() {
 	done := make(chan int)
 	randomGenerator := func() int { return rand.Intn(50000000) }
 
