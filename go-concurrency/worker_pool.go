@@ -46,7 +46,7 @@ func (wp *workerPool) Run() {
 	close(wp.taskChan)
 }
 
-func main() {
+func startWorkerPool() {
 	tasks := make([]Task, 20)
 	for i := range 20 {
 		tasks[i].id = i
