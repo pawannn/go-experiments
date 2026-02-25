@@ -31,7 +31,7 @@ func BuyTickets(wg *sync.WaitGroup, ticketChan chan int, userID int) {
 	ticketChan <- userID
 }
 
-func main() {
+func StartSale() {
 	var wg sync.WaitGroup
 	tickets := 500
 	ticketsChan := make(chan int)
