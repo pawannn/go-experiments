@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"sync"
 	"time"
 )
@@ -33,13 +36,13 @@ func (wp *workerPool) worker() {
 }
 
 func (wp *workerPool) Run() {
-	wp.wg.Add(len(wp.tasks))
-	wp.taskChan = make(chan Task, len(wp.tasks))
+	wp.taskChan = make(chan Task, wp.concurrency)
 	for range wp.concurrency {
 		go wp.worker()
 	}
 
 	for _, task := range wp.tasks {
+		wp.wg.Add(1)
 		wp.taskChan <- task
 	}
 
@@ -48,6 +51,11 @@ func (wp *workerPool) Run() {
 }
 
 func startWorkerPool() {
+	go func() {
+		log.Println("pprof running on :6060")
+		log.Println(http.ListenAndServe(":6060", nil))
+	}()
+
 	n := 100000
 	tasks := make([]Task, n)
 	for i := range n {
@@ -57,7 +65,7 @@ func startWorkerPool() {
 
 	wp := workerPool{
 		tasks:       tasks,
-		concurrency: 100,
+		concurrency: 10,
 	}
 
 	wp.Run()
