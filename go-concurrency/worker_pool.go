@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"runtime"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -14,7 +14,8 @@ type Task struct {
 
 func (t *Task) ProcessTask() {
 	fmt.Println("completing task ID : ", t.id, " task name : ", t.name)
-	time.Sleep(time.Second * 2)
+	workTime := time.Millisecond * time.Duration(rand.Intn(90)+10)
+	time.Sleep(workTime)
 }
 
 type workerPool struct {
@@ -42,20 +43,21 @@ func (wp *workerPool) Run() {
 		wp.taskChan <- task
 	}
 
-	wp.wg.Wait()
 	close(wp.taskChan)
+	wp.wg.Wait()
 }
 
 func startWorkerPool() {
-	tasks := make([]Task, 20)
-	for i := range 20 {
+	n := 100000
+	tasks := make([]Task, n)
+	for i := range n {
 		tasks[i].id = i
 		tasks[i].name = "work" + fmt.Sprint(i)
 	}
 
 	wp := workerPool{
 		tasks:       tasks,
-		concurrency: runtime.NumCPU(),
+		concurrency: 100,
 	}
 
 	wp.Run()
