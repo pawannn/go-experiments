@@ -14,8 +14,8 @@ func activateGiftCard() func(int) int {
 }
 
 func checkout() {
-	amount := 200
-	giftCard := activateGiftCard()
-	totalAoumt := giftCard(amount)
-	fmt.Println(totalAoumt)
+	totalAmount := 200
+	discount := activateGiftCard()
+	finalAmount := discount(totalAmount)
+	fmt.Println(finalAmount)
 }
