@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/pawannn/httpfromscratch/internal"
 )
 
 func getLines(f io.ReadCloser) <-chan string {
@@ -57,8 +59,13 @@ func main() {
 			break
 		}
 
-		for lines := range getLines(conn) {
-			fmt.Println(lines)
+		r, err := internal.RequestFromReader(conn)
+		if err != nil {
+			break
 		}
+
+		fmt.Println("HTTP Version : ", r.RequestLine.HTTPVersion)
+		fmt.Println("Method : ", r.RequestLine.Method)
+		fmt.Println("Target : ", r.RequestLine.RequestTarget)
 	}
 }

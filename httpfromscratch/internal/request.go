@@ -61,7 +61,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	buf := make([]byte, 1024)
 	bufLen := 0
 
-	for !request.Done() || !request.ErrorState() {
+	for !request.Done() && !request.ErrorState() {
 		n, err := reader.Read(buf[bufLen:])
 		if err != nil {
 			return nil, err
