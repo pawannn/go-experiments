@@ -14,29 +14,29 @@ type Request struct {
 	State       parserState
 }
 
-func NewRequest() *Request {
+func newRequest() *Request {
 	return &Request{
 		State: stateInit,
 	}
 }
 
-func (r *Request) Done() bool {
+func (r *Request) done() bool {
 	return r.State == stateDone
 }
 
-func (r *Request) ErrorState() bool {
+func (r *Request) errorState() bool {
 	return r.State == stateError
 }
 
-func (r *Request) Parse(data []byte) (int, error) {
+func (r *Request) parse(data []byte) (int, error) {
 	read := 0
 OUTER:
 	for {
 		switch r.State {
 		case stateError:
-			return 0, ERR_REQUEST_ERRSTATE
+			return 0, errStateRequest
 		case stateInit:
-			rl, n, err := ParseRequestLine(data)
+			rl, n, err := parseRequestLine(data)
 			if err != nil {
 				r.State = stateError
 				return 0, err
@@ -56,19 +56,19 @@ OUTER:
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	request := NewRequest()
+	request := newRequest()
 
 	buf := make([]byte, 1024)
 	bufLen := 0
 
-	for !request.Done() && !request.ErrorState() {
+	for !request.done() && !request.errorState() {
 		n, err := reader.Read(buf[bufLen:])
 		if err != nil {
 			return nil, err
 		}
 
 		bufLen += n
-		readN, err := request.Parse(buf[:bufLen])
+		readN, err := request.parse(buf[:bufLen])
 		if err != nil {
 			return nil, err
 		}

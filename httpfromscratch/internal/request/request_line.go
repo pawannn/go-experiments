@@ -12,7 +12,7 @@ type RequestLine struct {
 }
 
 // GET /coffee HTTP/1.1\r\n
-func ParseRequestLine(b []byte) (*RequestLine, int, error) {
+func parseRequestLine(b []byte) (*RequestLine, int, error) {
 
 	idx := bytes.Index(b, SEPARATOR)
 	if idx == -1 {
@@ -24,10 +24,10 @@ func ParseRequestLine(b []byte) (*RequestLine, int, error) {
 
 	parts := bytes.Split(start_line, []byte(" "))
 	if len(parts) != 3 {
-		return nil, 0, ERR_MALFORMED_REQ_LINE
+		return nil, 0, errMalfunctionedLine
 	}
 
-	version, err := GetHTTPVersion(string(parts[2]))
+	version, err := getHTTPVersion(string(parts[2]))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -41,9 +41,9 @@ func ParseRequestLine(b []byte) (*RequestLine, int, error) {
 	return rl, restOfMessage, nil
 }
 
-func GetHTTPVersion(httpVersion string) (string, error) {
+func getHTTPVersion(httpVersion string) (string, error) {
 	if httpVersion != "HTTP/1.1" {
-		return "", ERR_UNSUPPORTED_HTTP_VERSION
+		return "", errUnsupportedHTTPVersion
 	}
 
 	_, version, _ := strings.Cut(httpVersion, "/")
