@@ -11,6 +11,7 @@ type parserState int
 
 const (
 	stateInit parserState = iota
+	stateHeader
 	stateDone
 	stateError
 )

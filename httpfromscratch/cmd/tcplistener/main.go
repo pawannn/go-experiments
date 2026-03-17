@@ -67,5 +67,6 @@ func main() {
 		fmt.Println("HTTP Version : ", r.RequestLine.HTTPVersion)
 		fmt.Println("Method : ", r.RequestLine.Method)
 		fmt.Println("Target : ", r.RequestLine.RequestTarget)
+		fmt.Println("headers: ", r.Header.Header)
 	}
 }
