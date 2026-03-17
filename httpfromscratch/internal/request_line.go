@@ -24,12 +24,12 @@ func ParseRequestLine(b []byte) (*RequestLine, int, error) {
 
 	parts := bytes.Split(start_line, []byte(" "))
 	if len(parts) != 3 {
-		return nil, idx, ERR_MALFORMED_REQ_LINE
+		return nil, 0, ERR_MALFORMED_REQ_LINE
 	}
 
 	version, err := GetHTTPVersion(string(parts[2]))
 	if err != nil {
-		return nil, idx, err
+		return nil, 0, err
 	}
 
 	rl := &RequestLine{
