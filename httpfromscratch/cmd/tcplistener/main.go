@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/pawannn/httpfromscratch/internal"
+	"github.com/pawannn/httpfromscratch/internal/request"
 )
 
 func getLines(f io.ReadCloser) <-chan string {
@@ -59,7 +59,7 @@ func main() {
 			break
 		}
 
-		r, err := internal.RequestFromReader(conn)
+		r, err := request.RequestFromReader(conn)
 		if err != nil {
 			break
 		}
