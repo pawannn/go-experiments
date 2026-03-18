@@ -59,14 +59,15 @@ func main() {
 			break
 		}
 
-		r, err := request.RequestFromReader(conn)
+		_, err = request.RequestFromReader(conn)
 		if err != nil {
 			break
 		}
 
-		fmt.Println("HTTP Version : ", r.RequestLine.HTTPVersion)
-		fmt.Println("Method : ", r.RequestLine.Method)
-		fmt.Println("Target : ", r.RequestLine.RequestTarget)
-		fmt.Println("headers: ", r.Header.Header)
+		// fmt.Println("HTTP Version : ", r.RequestLine.HTTPVersion)
+		// fmt.Println("Method : ", r.RequestLine.Method)
+		// fmt.Println("Target : ", r.RequestLine.RequestTarget)
+		// fmt.Println("headers: ", r.Header.Header)
+		// fmt.Println("body", r.Body)
 	}
 }

@@ -1,6 +1,7 @@
 package request
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/pawannn/httpfromscratch/internal/header"
@@ -14,13 +15,17 @@ import (
 type Request struct {
 	RequestLine RequestLine
 	Header      *header.Header
-	state       parserState
+	Body        string
+
+	state parserState
 }
 
 func newRequest() *Request {
 	return &Request{
-		state:  stateInit,
 		Header: header.NewHeader(),
+		Body:   "",
+
+		state: stateInit,
 	}
 }
 
@@ -70,8 +75,30 @@ OUTER:
 			read += n
 
 			if done {
+				r.state = stateBody
+			}
+
+		case stateBody:
+			contentLength := r.Header.GetContentLength()
+			if contentLength == 0 {
 				r.state = stateDone
 			}
+
+			toRead := contentLength - len(r.Body)
+			available := len(curentData)
+
+			n := min(toRead, available)
+
+			if n > 0 {
+				fmt.Println(string(curentData[:n]))
+				r.Body += string(curentData[:n])
+				read += n
+			}
+
+			if len(r.Body) == contentLength {
+				r.state = stateDone
+			}
+
 		case stateDone:
 			break OUTER
 		}
@@ -87,7 +114,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	for !request.done() && !request.errorState() {
 		n, err := reader.Read(buf[bufLen:])
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return nil, err
 		}
 
@@ -99,6 +126,10 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		copy(buf, buf[readN:bufLen])
 		bufLen -= readN
+
+		if err == io.EOF {
+			break
+		}
 	}
 
 	return request, nil

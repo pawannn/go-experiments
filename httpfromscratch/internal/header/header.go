@@ -3,6 +3,7 @@ package header
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,20 @@ func (h *Header) Set(key string, value string) {
 	}
 }
 
+func (h *Header) GetContentLength() int {
+	contentLength := h.Get("content-length")
+	if contentLength == "" {
+		return 0
+	}
+
+	length, err := strconv.Atoi(contentLength)
+	if err != nil {
+		return 0
+	}
+
+	return length
+}
+
 func (h *Header) Parse(data []byte) (int, bool, error) {
 	read := 0
 	done := false
@@ -42,6 +57,7 @@ func (h *Header) Parse(data []byte) (int, bool, error) {
 		}
 
 		if idx == 0 {
+			read += len(rn)
 			done = true
 			break
 		}
