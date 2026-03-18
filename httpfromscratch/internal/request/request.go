@@ -1,7 +1,6 @@
 package request
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/pawannn/httpfromscratch/internal/header"
@@ -79,22 +78,30 @@ OUTER:
 			}
 
 		case stateBody:
+			// get content length
 			contentLength := r.Header.GetContentLength()
+
+			// set the state as done if content length is 0 (there's nothing in the body)
 			if contentLength == 0 {
 				r.state = stateDone
 			}
 
+			// The amount of data left to read
 			toRead := contentLength - len(r.Body)
+
+			// The amount of data available to read
 			available := len(curentData)
 
+			// take the minimum value (available data length)
 			n := min(toRead, available)
 
+			// if there's data to read, attach the data to body and increment read by n bytes
 			if n > 0 {
-				fmt.Println(string(curentData[:n]))
 				r.Body += string(curentData[:n])
 				read += n
 			}
 
+			// set the state as done if the body is equal to content length
 			if len(r.Body) == contentLength {
 				r.state = stateDone
 			}
