@@ -1,20 +1,26 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
+
+	"github.com/pawannn/httpfromscratch/internal/request"
+	"github.com/pawannn/httpfromscratch/internal/response"
 )
 
 type Server struct {
-	port   uint16
-	closed bool
+	port    uint16
+	closed  bool
+	handler response.Handler
 }
 
-func Serve(port uint16) (*Server, error) {
+func Serve(port uint16, handler response.Handler) (*Server, error) {
 	s := &Server{
-		port:   port,
-		closed: false,
+		port:    port,
+		closed:  false,
+		handler: handler,
 	}
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -50,14 +56,31 @@ func (s *Server) createServer(listener net.Listener) {
 	}()
 }
 func (s *Server) runConnection(conn io.ReadWriteCloser) {
-	body := "HELO WORLD"
+	defer conn.Close()
 
-	data := fmt.Sprintf(
-		"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s",
-		len(body),
-		body,
-	)
+	h := response.GetDefaultHeaders(0)
+	r, err := request.RequestFromReader(conn)
+	if err != nil {
+		response.WriteStatusLine(conn, response.StatusBadRequest)
+		response.WriteHeaders(conn, h)
+		return
+	}
 
-	conn.Write([]byte(data))
-	conn.Close()
+	writer := bytes.NewBuffer([]byte{})
+	handlerErr := s.handler(writer, r)
+
+	statusCode := response.StatusOk
+	body := []byte{}
+
+	if handlerErr != nil {
+		statusCode = handlerErr.Code
+		body = []byte(handlerErr.Message)
+	} else {
+		body = writer.Bytes()
+	}
+
+	h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
+	response.WriteStatusLine(conn, statusCode)
+	response.WriteHeaders(conn, h)
+	conn.Write(body)
 }

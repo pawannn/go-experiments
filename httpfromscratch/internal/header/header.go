@@ -23,6 +23,11 @@ func (h *Header) Get(key string) string {
 	return h.Header[strings.ToLower(key)]
 }
 
+func (h *Header) Replace(key string, value string) {
+	name := strings.ToLower(key)
+	h.Header[name] = value
+}
+
 func (h *Header) Set(key string, value string) {
 	name := strings.ToLower(key)
 	if v, ok := h.Header[name]; ok {
@@ -44,6 +49,12 @@ func (h *Header) GetContentLength() int {
 	}
 
 	return length
+}
+
+func (h *Header) Foreach(cb func(string, string)) {
+	for key, val := range h.Header {
+		cb(key, val)
+	}
 }
 
 func (h *Header) Parse(data []byte) (int, bool, error) {
