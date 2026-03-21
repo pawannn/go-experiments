@@ -2,68 +2,64 @@ package server
 
 import (
 	"fmt"
+	"httpfromscratch/internal/request"
+	"httpfromscratch/internal/response"
 	"io"
 	"net"
-
-	"github.com/pawannn/httpfromscratch/internal/request"
-	"github.com/pawannn/httpfromscratch/internal/response"
 )
 
+type Handler func(*response.ResponseWriter, *request.Request)
+
 type Server struct {
-	port    uint16
-	closed  bool
-	handler response.Handler
+	port     uint16
+	open     bool
+	listener net.Listener
+	handler  Handler
 }
 
-func Serve(port uint16, handler response.Handler) (*Server, error) {
-	s := &Server{
-		port:    port,
-		closed:  false,
-		handler: handler,
-	}
-
+func Serve(port uint16, handler Handler) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, err
 	}
 
-	go s.createServer(listener)
+	s := &Server{
+		port:     port,
+		open:     true,
+		listener: listener,
+		handler:  handler,
+	}
 
-	return s, nil
+	go s.startListener()
+
+	return s, err
 }
 
-func (s *Server) Close() error {
-	s.closed = true
-	return nil
+func (s *Server) Close() {
+	s.open = false
 }
 
-func (s *Server) createServer(listener net.Listener) {
+func (s *Server) startListener() {
 	go func() {
 		for {
-			conn, err := listener.Accept()
-
-			if s.closed {
+			conn, err := s.listener.Accept()
+			if err != nil || !s.open {
 				return
 			}
 
-			if err != nil {
-				return
-			}
-
-			go s.runConnection(conn)
+			go s.handleConnection(conn)
 		}
 	}()
 }
-func (s *Server) runConnection(conn io.ReadWriteCloser) {
-	defer conn.Close()
 
+func (s *Server) handleConnection(conn io.ReadWriter) {
 	responseWriter := response.NewResponseWriter(conn)
 
-	r, err := request.RequestFromReader(conn)
+	req, err := request.ParseFromReader(conn)
 	if err != nil {
-		responseWriter.SendResponse(response.StatusBadRequest, []byte{})
+		responseWriter.SendResponse(response.StatusBadRequest, []byte("Invalid request"))
 		return
 	}
 
-	s.handler(responseWriter, r)
+	go s.handler(responseWriter, req)
 }

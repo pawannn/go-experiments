@@ -1,3 +1,3 @@
-module github.com/pawannn/httpfromscratch
+module httpfromscratch
 
 go 1.25.0

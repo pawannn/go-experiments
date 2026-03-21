@@ -1,18 +1,21 @@
 package request
 
-import "errors"
+import "fmt"
 
-var SEPARATOR []byte = []byte("\r\n")
-var errMalfunctionedLine = errors.New("Malformed request line")
-var errUnsupportedHTTPVersion = errors.New("unsupported HTTP version")
-var errStateRequest = errors.New("Request in Error state")
+var rn = []byte("\r\n")
+
+var errMalfunctionedRequest error = fmt.Errorf("malfunctioned request line")
+var errInvalidMethod error = fmt.Errorf("invalid method")
+var errUnsupportedProtocol error = fmt.Errorf("invalid protocol")
 
 type parserState int
 
 const (
 	stateInit parserState = iota
-	stateHeader
+	stateHeaders
 	stateBody
 	stateDone
 	stateError
 )
+
+var errParserState error = fmt.Errorf("parser in error state")

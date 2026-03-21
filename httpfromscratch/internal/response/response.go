@@ -2,79 +2,72 @@ package response
 
 import (
 	"fmt"
+	"httpfromscratch/internal/header"
 	"io"
+)
 
-	"github.com/pawannn/httpfromscratch/internal/header"
-	"github.com/pawannn/httpfromscratch/internal/request"
+type StatsCode int
+
+const (
+	StatusOk                  StatsCode = 200
+	StatusBadRequest          StatsCode = 400
+	StatusInternalServerError StatsCode = 500
 )
 
 type ResponseWriter struct {
-	Writer io.Writer
+	w io.Writer
 }
 
-func NewResponseWriter(w io.Writer) *ResponseWriter {
+func NewResponseWriter(conn io.Writer) *ResponseWriter {
 	return &ResponseWriter{
-		Writer: w,
+		w: conn,
 	}
 }
 
-type statusCode int
+func (rw *ResponseWriter) writeStatusLine(statsCode StatsCode) error {
+	b := []byte{}
 
-const (
-	StatusOk                  statusCode = 200
-	StatusBadRequest          statusCode = 400
-	StatusInternalServerError statusCode = 500
-)
-
-type HandlerError struct {
-	Code    statusCode
-	Message string
-}
-
-type Handler func(w *ResponseWriter, req *request.Request)
-
-func (w *ResponseWriter) WriteStatusLine(statusCode statusCode) error {
-	statusLine := []byte{}
-	switch statusCode {
+	switch statsCode {
 	case StatusOk:
-		statusLine = []byte("HTTP/1.1 200 OK\r\n")
+		b = []byte("HTTP/1.1 200 OK\r\n")
 	case StatusBadRequest:
-		statusLine = []byte("HTTP/1.1 400 Bad Request\r\n")
+		b = []byte("HTTP/1.1 400 Bad Request\r\n")
 	case StatusInternalServerError:
-		statusLine = []byte("HTTP/1.1 500 Internal Server Error\r\n")
-	default:
-		return fmt.Errorf("unrecognized error code")
+		b = []byte("HTTP/1.1 500 Internal Server Error\r\n")
 	}
 
-	_, err := w.Writer.Write(statusLine)
+	_, err := rw.w.Write(b)
 	return err
 }
 
-func (w *ResponseWriter) GetDefaultHeaders(contentLength int) *header.Header {
+func (rw *ResponseWriter) getDefaultHeaders(contentLength int) header.Headers {
 	h := header.NewHeader()
-	h.Set("Content-Length", fmt.Sprintf("%d", contentLength))
-	h.Set("Connection", "Closed")
-	h.Set("Content-type", "text/plaintext")
+
+	h.SetContentLength(contentLength)
+	h.Set("Connection", "Close")
+	h.Set("Content-Type", "text/plaintext")
 
 	return h
 }
 
-func (w *ResponseWriter) WriteHeaders(h *header.Header) error {
+func (rw *ResponseWriter) writeHeaders(header header.Headers) error {
 	b := []byte{}
 
-	h.Foreach(func(k, v string) {
+	header.ForEach(func(k, v string) {
 		b = fmt.Appendf(b, "%s: %s\r\n", k, v)
 	})
 	b = fmt.Append(b, "\r\n")
 
-	_, err := w.Writer.Write(b)
+	_, err := rw.w.Write(b)
 	return err
 }
 
-func (w *ResponseWriter) SendResponse(statusCode statusCode, data []byte) {
-	length := len(data)
-	headers := w.GetDefaultHeaders(length)
-	w.WriteHeaders(headers)
-	w.WriteStatusLine(statusCode)
-	w.Writer.Write(data)
+func (rw *ResponseWriter) SendResponse(statusCode StatsCode, body []byte) {
+	contentLength := len(body)
+	defaultHeader := rw.getDefaultHeaders(contentLength)
+
+	rw.writeStatusLine(statusCode)
+	rw.writeHeaders(defaultHeader)
+
+	rw.w.Write(body)
 }

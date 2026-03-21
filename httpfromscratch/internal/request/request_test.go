@@ -7,7 +7,7 @@ import (
 
 func TestRequestLineParser(t *testing.T) {
 	// Test: Good GET Request line
-	r, err := RequestFromReader(strings.NewReader(
+	r, err := ParseFromReader(strings.NewReader(
 		"GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
 	))
 
@@ -32,7 +32,7 @@ func TestRequestLineParser(t *testing.T) {
 	}
 
 	// Test: Good GET Request line with path
-	r, err = RequestFromReader(strings.NewReader(
+	r, err = ParseFromReader(strings.NewReader(
 		"GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
 	))
 
@@ -57,7 +57,7 @@ func TestRequestLineParser(t *testing.T) {
 	}
 
 	// Test: Invalid number of parts in request line
-	_, err = RequestFromReader(strings.NewReader(
+	_, err = ParseFromReader(strings.NewReader(
 		"/coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
 	))
 

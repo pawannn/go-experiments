@@ -1,8 +1,8 @@
 package header
 
-import "errors"
+import "fmt"
 
 var rn = []byte("\r\n")
-var errMalfunctionedHeaderLine = errors.New("malfunctioned header line")
-var errMalfunctionedHeaderName = errors.New("malfunctioned header name")
-var errMalfunctionedHeaderValue = errors.New("malfunctioned header value")
+
+var errMalfunctionedHeaderLine error = fmt.Errorf("Malfunctioned header line")
+var errMalfunctionedHeaders error = fmt.Errorf("Malfunctioned headers")

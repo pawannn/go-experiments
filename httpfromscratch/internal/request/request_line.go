@@ -1,51 +1,58 @@
 package request
 
-import (
-	"bytes"
-	"strings"
-)
+import "bytes"
 
 type RequestLine struct {
 	HTTPVersion   string
-	RequestTarget string
 	Method        string
+	RequestTarget string
 }
 
-// GET /coffee HTTP/1.1\r\n
-func parseRequestLine(b []byte) (*RequestLine, int, error) {
-
-	idx := bytes.Index(b, SEPARATOR)
-	if idx == -1 {
+func parseRequestLine(request_line []byte) (*RequestLine, int, error) {
+	first_line, _, ok := bytes.Cut(request_line, rn)
+	if !ok {
 		return nil, 0, nil
 	}
 
-	start_line := b[:idx]
-	restOfMessage := idx + len(SEPARATOR)
-
-	parts := bytes.Split(start_line, []byte(" "))
+	parts := bytes.Split(first_line, []byte(" "))
 	if len(parts) != 3 {
-		return nil, 0, errMalfunctionedLine
+		return nil, -1, errMalfunctionedRequest
 	}
 
-	version, err := getHTTPVersion(string(parts[2]))
+	version, err := parseHttpVersion(parts[2])
 	if err != nil {
-		return nil, 0, err
+		return nil, -1, err
 	}
 
-	rl := &RequestLine{
+	if !validMethod(parts[0]) {
+		return nil, -1, errInvalidMethod
+	}
+
+	return &RequestLine{
+		HTTPVersion:   version,
 		Method:        string(parts[0]),
 		RequestTarget: string(parts[1]),
-		HTTPVersion:   version,
-	}
-
-	return rl, restOfMessage, nil
+	}, len(first_line) + len(rn), nil
 }
 
-func getHTTPVersion(httpVersion string) (string, error) {
-	if httpVersion != "HTTP/1.1" {
-		return "", errUnsupportedHTTPVersion
+func parseHttpVersion(protocol []byte) (string, error) {
+	p, version, ok := bytes.Cut(protocol, []byte("/"))
+	if !ok {
+		return "", errUnsupportedProtocol
 	}
 
-	_, version, _ := strings.Cut(httpVersion, "/")
-	return version, nil
+	if string(p) != "HTTP" {
+		return "", errUnsupportedProtocol
+	}
+
+	return string(version), nil
+}
+
+func validMethod(method []byte) bool {
+	switch string(method) {
+	case "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS":
+		return true
+	}
+
+	return false
 }

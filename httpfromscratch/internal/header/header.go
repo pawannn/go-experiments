@@ -7,115 +7,93 @@ import (
 	"strings"
 )
 
-type Header struct {
-	Header map[string]string
+type Headers map[string]string
+
+func NewHeader() Headers {
+	return make(map[string]string)
 }
 
-func NewHeader() *Header {
-	h := &Header{
-		Header: make(map[string]string),
-	}
-
-	return h
-}
-
-func (h *Header) Get(key string) string {
-	return h.Header[strings.ToLower(key)]
-}
-
-func (h *Header) Replace(key string, value string) {
+func (h Headers) Set(key string, value string) {
 	name := strings.ToLower(key)
-	h.Header[name] = value
-}
-
-func (h *Header) Set(key string, value string) {
-	name := strings.ToLower(key)
-	if v, ok := h.Header[name]; ok {
-		h.Header[name] = fmt.Sprintf("%s,%s", v, value)
+	val, ok := h[name]
+	if !ok {
+		h[name] = value
 	} else {
-		h.Header[name] = value
+		h[name] = fmt.Sprintf("%s, %s", val, value)
 	}
 }
 
-func (h *Header) GetContentLength() int {
-	contentLength := h.Get("content-length")
-	if contentLength == "" {
+func (h Headers) Replace(key string, value string) {
+	h[strings.ToLower(key)] = value
+}
+
+func (h Headers) ContentLength() int {
+	val, ok := h["Content-Length"]
+	if !ok {
 		return 0
 	}
 
-	length, err := strconv.Atoi(contentLength)
+	contentLength, err := strconv.Atoi(val)
 	if err != nil {
 		return 0
 	}
 
-	return length
+	return contentLength
 }
 
-func (h *Header) Foreach(cb func(string, string)) {
-	for key, val := range h.Header {
-		cb(key, val)
-	}
+func (h Headers) SetContentLength(contentLength int) {
+	h["Content-Length"] = fmt.Sprintf("%d", contentLength)
 }
 
-func (h *Header) Parse(data []byte) (int, bool, error) {
+func (h Headers) ParseHeaders(headerLines []byte) (int, bool, error) {
 	read := 0
 	done := false
 
 	for {
-		idx := bytes.Index(data, rn)
+		idx := bytes.Index(headerLines[read:], rn)
 		if idx == -1 {
 			break
 		}
 
 		if idx == 0 {
-			read += len(rn)
 			done = true
+			read += len(rn)
 			break
 		}
 
-		name, value, err := parseHeader(data[:idx])
+		key, value, err := parse(headerLines[idx:])
 		if err != nil {
-			return 0, false, err
+			return -1, false, err
 		}
-
-		if !isToken([]byte(name)) {
-			return 0, false, errMalfunctionedHeaderLine
-		}
+		h.Set(key, value)
 
 		read += idx + len(rn)
-		h.Set(name, value)
-
-		data = data[idx+len(rn):]
 	}
 
 	return read, done, nil
 }
 
-func parseHeader(data []byte) (string, string, error) {
-	if len(data) == 0 {
-		return "", "", nil
+func (h Headers) ForEach(cb func(k, v string)) {
+	for key, val := range h {
+		cb(key, val)
 	}
+}
 
-	parts := bytes.SplitN(data, []byte(":"), 2)
+func parse(headerLine []byte) (string, string, error) {
+	parts := bytes.SplitN(headerLine, []byte(":"), 2)
 	if len(parts) != 2 {
 		return "", "", errMalfunctionedHeaderLine
 	}
 
-	field := bytes.TrimSpace(parts[0])
-	value := bytes.TrimSpace(parts[1])
-
-	return string(field), string(value), nil
+	key := string(parts[0])
+	value := string(parts[1])
+	return key, value, nil
 }
 
-func isToken(token []byte) bool {
-	if len(token) == 0 {
-		return false
-	}
-
-	for _, ch := range token {
+func validHeaderName(headerName []byte) bool {
+	for _, ch := range headerName {
 		found := false
-
-		if ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9' {
+		if ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' {
 			found = true
 		}
 
@@ -129,5 +107,5 @@ func isToken(token []byte) bool {
 		}
 	}
 
-	return true
+	return false
 }
