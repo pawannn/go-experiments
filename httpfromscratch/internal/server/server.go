@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -58,29 +57,13 @@ func (s *Server) createServer(listener net.Listener) {
 func (s *Server) runConnection(conn io.ReadWriteCloser) {
 	defer conn.Close()
 
-	h := response.GetDefaultHeaders(0)
+	responseWriter := response.NewResponseWriter(conn)
+
 	r, err := request.RequestFromReader(conn)
 	if err != nil {
-		response.WriteStatusLine(conn, response.StatusBadRequest)
-		response.WriteHeaders(conn, h)
+		responseWriter.SendResponse(response.StatusBadRequest, []byte{})
 		return
 	}
 
-	writer := bytes.NewBuffer([]byte{})
-	handlerErr := s.handler(writer, r)
-
-	statusCode := response.StatusOk
-	body := []byte{}
-
-	if handlerErr != nil {
-		statusCode = handlerErr.Code
-		body = []byte(handlerErr.Message)
-	} else {
-		body = writer.Bytes()
-	}
-
-	h.Replace("Content-Length", fmt.Sprintf("%d", len(body)))
-	response.WriteStatusLine(conn, statusCode)
-	response.WriteHeaders(conn, h)
-	conn.Write(body)
+	s.handler(responseWriter, r)
 }

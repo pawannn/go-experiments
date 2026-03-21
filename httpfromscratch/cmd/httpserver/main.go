@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -15,23 +14,17 @@ import (
 const port uint16 = 8080
 
 func main() {
-	s, err := server.Serve(port, func(w io.Writer, req *request.Request) *response.HandlerError {
+	s, err := server.Serve(port, func(w *response.ResponseWriter, req *request.Request) {
 		switch req.RequestLine.RequestTarget {
 		case "/yourporblem":
-			return &response.HandlerError{
-				Code:    response.StatusBadRequest,
-				Message: "Your problem not my problem",
-			}
+			w.SendResponse(response.StatusBadRequest, []byte("Your problem"))
 		case "/myproblem":
-			return &response.HandlerError{
-				Code:    response.StatusInternalServerError,
-				Message: "my problem not your problem",
-			}
+			w.SendResponse(response.StatusInternalServerError, []byte("Our problem"))
 		case "/use-neovim":
-			w.Write([]byte("all good\n"))
+			w.SendResponse(response.StatusOk, []byte("Good"))
 		}
-		return nil
 	})
+
 	if err != nil {
 		log.Fatalf("Error starting server : %v", err)
 	}

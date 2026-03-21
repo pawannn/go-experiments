@@ -8,7 +8,14 @@ import (
 	"github.com/pawannn/httpfromscratch/internal/request"
 )
 
-type Response struct {
+type ResponseWriter struct {
+	Writer io.Writer
+}
+
+func NewResponseWriter(w io.Writer) *ResponseWriter {
+	return &ResponseWriter{
+		Writer: w,
+	}
 }
 
 type statusCode int
@@ -24,9 +31,9 @@ type HandlerError struct {
 	Message string
 }
 
-type Handler func(w io.Writer, req *request.Request) *HandlerError
+type Handler func(w *ResponseWriter, req *request.Request)
 
-func WriteStatusLine(w io.Writer, statusCode statusCode) error {
+func (w *ResponseWriter) WriteStatusLine(statusCode statusCode) error {
 	statusLine := []byte{}
 	switch statusCode {
 	case StatusOk:
@@ -39,11 +46,11 @@ func WriteStatusLine(w io.Writer, statusCode statusCode) error {
 		return fmt.Errorf("unrecognized error code")
 	}
 
-	_, err := w.Write(statusLine)
+	_, err := w.Writer.Write(statusLine)
 	return err
 }
 
-func GetDefaultHeaders(contentLength int) *header.Header {
+func (w *ResponseWriter) GetDefaultHeaders(contentLength int) *header.Header {
 	h := header.NewHeader()
 	h.Set("Content-Length", fmt.Sprintf("%d", contentLength))
 	h.Set("Connection", "Closed")
@@ -52,7 +59,7 @@ func GetDefaultHeaders(contentLength int) *header.Header {
 	return h
 }
 
-func WriteHeaders(w io.Writer, h *header.Header) error {
+func (w *ResponseWriter) WriteHeaders(h *header.Header) error {
 	b := []byte{}
 
 	h.Foreach(func(k, v string) {
@@ -60,6 +67,14 @@ func WriteHeaders(w io.Writer, h *header.Header) error {
 	})
 	b = fmt.Append(b, "\r\n")
 
-	_, err := w.Write(b)
+	_, err := w.Writer.Write(b)
 	return err
+}
+
+func (w *ResponseWriter) SendResponse(statusCode statusCode, data []byte) {
+	length := len(data)
+	headers := w.GetDefaultHeaders(length)
+	w.WriteHeaders(headers)
+	w.WriteStatusLine(statusCode)
+	w.Writer.Write(data)
 }
