@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/IBM/sarama"
 )
@@ -15,11 +16,15 @@ import (
 type Order struct {
 	CustomerName string `json:"customer_name"`
 	OrderID      string `json:"order_id"`
+	RetryCount   int    `json:"retry_count"`
+	ProcessAt    int
 }
 
 type OrdersConsumer struct {
-	group  sarama.ConsumerGroup
-	topics []string
+	group        sarama.ConsumerGroup
+	errorHandler *ErrorHandler
+	topics       []string
+	maxRetry     int
 }
 
 func main() {
@@ -32,10 +37,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = orderConsumer.start(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctx := context.Background()
+
+	go func() {
+		if err := orderConsumer.start(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		retryConsumer, err := newOrdersConsumer(
+			brokers,
+			"order-retry-group",
+			[]string{"order_error"},
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := retryConsumer.start(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -51,9 +74,16 @@ func newOrdersConsumer(brokers []string, groupID string, topics []string) (*Orde
 		return nil, err
 	}
 
+	errHanlder, err := NewErroHandler(brokers, "order")
+	if err != nil {
+		return nil, err
+	}
+
 	return &OrdersConsumer{
-		group:  consumerGroup,
-		topics: topics,
+		group:        consumerGroup,
+		topics:       topics,
+		errorHandler: errHanlder,
+		maxRetry:     3,
 	}, nil
 }
 
@@ -82,7 +112,42 @@ func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
 		return err
 	}
 
-	fmt.Println("Recieved a new order : ", order.OrderID, " by customer : ", order.CustomerName)
+	now := int(time.Now().Unix())
 
+	if order.ProcessAt > 0 && order.ProcessAt > now {
+		fmt.Println("Not ready yet, requeueing:", order.OrderID)
+
+		msgInBytes, _ := json.Marshal(order)
+
+		return oC.errorHandler.SendToRetry(msgInBytes)
+	}
+	fmt.Println("Processing order:", order.OrderID, "retry:", order.RetryCount)
+
+	err := ProcessOrder(order)
+	if err != nil {
+		order.RetryCount++
+
+		order.ProcessAt = int(time.Now().Add(30 * time.Second).Unix())
+
+		fmt.Println("Failed order:", order.OrderID, "retry:", order.RetryCount)
+
+		msgInBytes, err := json.Marshal(order)
+		if err != nil {
+			return err
+		}
+
+		if order.RetryCount > oC.maxRetry {
+			fmt.Println("Sending to DLQ:", order.OrderID)
+			return oC.errorHandler.SendToDLQ(msgInBytes)
+		}
+
+		return oC.errorHandler.SendToRetry(msgInBytes)
+	}
+
+	fmt.Println("Success:", order.OrderID)
 	return nil
+}
+
+func ProcessOrder(order *Order) error {
+	return fmt.Errorf("Some error occoured")
 }
