@@ -17,7 +17,7 @@ type Order struct {
 	CustomerName string `json:"customer_name"`
 	OrderID      string `json:"order_id"`
 	RetryCount   int    `json:"retry_count"`
-	ProcessAt    int
+	ProcessAt    int64
 }
 
 type OrdersConsumer struct {
@@ -95,7 +95,7 @@ func (oC *OrdersConsumer) start(ctx context.Context) error {
 	for {
 		err := oC.group.Consume(ctx, oC.topics, handlers)
 		if err != nil {
-			log.Panicln("Unable to consumer message : ", err.Error())
+			log.Println("Unable to consumer message : ", err.Error())
 			continue
 		}
 
@@ -112,7 +112,7 @@ func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
 		return err
 	}
 
-	now := int(time.Now().Unix())
+	now := time.Now().Unix()
 
 	if order.ProcessAt > 0 && order.ProcessAt > now {
 		fmt.Println("Not ready yet, requeueing:", order.OrderID)
@@ -127,7 +127,7 @@ func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
 	if err != nil {
 		order.RetryCount++
 
-		order.ProcessAt = int(time.Now().Add(30 * time.Second).Unix())
+		order.ProcessAt = time.Now().Add(30 * time.Second).Unix()
 
 		fmt.Println("Failed order:", order.OrderID, "retry:", order.RetryCount)
 
