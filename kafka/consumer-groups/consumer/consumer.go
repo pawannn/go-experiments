@@ -17,7 +17,6 @@ type Order struct {
 	CustomerName string `json:"customer_name"`
 	OrderID      string `json:"order_id"`
 	RetryCount   int    `json:"retry_count"`
-	ProcessAt    int64
 }
 
 type OrdersConsumer struct {
@@ -25,6 +24,7 @@ type OrdersConsumer struct {
 	errorHandler *ErrorHandler
 	topics       []string
 	maxRetry     int
+	delay        time.Duration
 }
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	groupID := "order-group"
 	topics := []string{"order"}
 
-	orderConsumer, err := newOrdersConsumer(brokers, groupID, topics)
+	orderConsumer, err := newOrdersConsumer(brokers, groupID, topics, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,9 +48,62 @@ func main() {
 	go func() {
 		retryConsumer, err := newOrdersConsumer(
 			brokers,
-			"order-retry-group",
-			[]string{"order_error"},
+			"order_retry_30s",
+			[]string{"order_error_30s"},
+			time.Duration(time.Second*30),
 		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := retryConsumer.start(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		retryConsumer, err := newOrdersConsumer(
+			brokers,
+			"order_error_60s",
+			[]string{"order_error_60s"},
+			time.Duration(time.Second*60),
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := retryConsumer.start(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		retryConsumer, err := newOrdersConsumer(
+			brokers,
+			"order_error_5m",
+			[]string{"order_error_5m"},
+			time.Duration(time.Minute*5),
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := retryConsumer.start(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	go func() {
+		retryConsumer, err := newOrdersConsumer(
+			brokers,
+			"order_error_10m",
+			[]string{"order_error_10m"},
+			time.Duration(time.Minute*10),
+		)
+
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,7 +118,7 @@ func main() {
 	<-sigChan
 }
 
-func newOrdersConsumer(brokers []string, groupID string, topics []string) (*OrdersConsumer, error) {
+func newOrdersConsumer(brokers []string, groupID string, topics []string, delay time.Duration) (*OrdersConsumer, error) {
 	config := sarama.NewConfig()
 	config.Consumer.Return.Errors = true
 
@@ -84,6 +137,7 @@ func newOrdersConsumer(brokers []string, groupID string, topics []string) (*Orde
 		topics:       topics,
 		errorHandler: errHanlder,
 		maxRetry:     3,
+		delay:        delay,
 	}, nil
 }
 
@@ -106,28 +160,19 @@ func (oC *OrdersConsumer) start(ctx context.Context) error {
 }
 
 func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
+	time.Sleep(time.Duration(oC.delay))
+
 	order := new(Order)
 
 	if err := json.Unmarshal(msg.Value, order); err != nil {
 		return err
 	}
 
-	now := time.Now().Unix()
-
-	if order.ProcessAt > 0 && order.ProcessAt > now {
-		fmt.Println("Not ready yet, requeueing:", order.OrderID)
-
-		msgInBytes, _ := json.Marshal(order)
-
-		return oC.errorHandler.SendToRetry(msgInBytes)
-	}
 	fmt.Println("Processing order:", order.OrderID, "retry:", order.RetryCount)
 
 	err := ProcessOrder(order)
 	if err != nil {
 		order.RetryCount++
-
-		order.ProcessAt = time.Now().Add(30 * time.Second).Unix()
 
 		fmt.Println("Failed order:", order.OrderID, "retry:", order.RetryCount)
 
@@ -136,12 +181,12 @@ func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
 			return err
 		}
 
-		if order.RetryCount > oC.maxRetry {
+		if order.RetryCount >= oC.maxRetry {
 			fmt.Println("Sending to DLQ:", order.OrderID)
 			return oC.errorHandler.SendToDLQ(msgInBytes)
 		}
 
-		return oC.errorHandler.SendToRetry(msgInBytes)
+		return oC.errorHandler.SendToRetry(msgInBytes, order.RetryCount)
 	}
 
 	fmt.Println("Success:", order.OrderID)
@@ -149,5 +194,9 @@ func (oC *OrdersConsumer) Handler(msg *sarama.ConsumerMessage) error {
 }
 
 func ProcessOrder(order *Order) error {
+	if order.RetryCount == 3 {
+		return nil
+	}
+
 	return fmt.Errorf("Some error occoured")
 }

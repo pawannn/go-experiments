@@ -27,9 +27,22 @@ func NewErroHandler(brokers []string, topic string) (*ErrorHandler, error) {
 	}, nil
 }
 
-func (e *ErrorHandler) SendToRetry(msg []byte) error {
+func (e *ErrorHandler) SendToRetry(msg []byte, retryCount int) error {
+	var topic string
+
+	switch retryCount {
+	case 1:
+		topic = e.errorTopic + "_30s"
+	case 2:
+		topic = e.errorTopic + "_60s"
+	case 3:
+		topic = e.errorTopic + "_5m"
+	default:
+		topic = e.errorTopic + "_10m"
+	}
+
 	producerMessage := &sarama.ProducerMessage{
-		Topic: e.errorTopic,
+		Topic: topic,
 		Value: sarama.StringEncoder(msg),
 	}
 
