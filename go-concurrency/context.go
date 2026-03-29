@@ -18,7 +18,7 @@ func worker(ctx context.Context) {
 	}
 }
 
-func main() {
+func somework() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go worker(ctx)
 
