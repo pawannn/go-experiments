@@ -7,15 +7,15 @@ import (
 	"os"
 )
 
-func main() {
-	http.HandleFunc("/file", handleFileUpload)
+func StartHttpChunkedUpload() {
+	http.HandleFunc("/file", handleHttpFileUpload)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func handleFileUpload(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+func handleHttpFileUpload(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // ~ 10 MB
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
