@@ -54,10 +54,11 @@ func HandleChunk(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("unable to save chunk data"))
 		return
 	}
+	defer dst.Close()
+
 	if chunkID == 0 {
 		dst.Truncate(int64(totalLength))
 	}
-	defer dst.Close()
 
 	offset := int64(chunkID) * int64(chunkSize)
 
