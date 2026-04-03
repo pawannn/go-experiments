@@ -7,3 +7,5 @@
 - [go concurrency](./go-concurrency/)
 - [go examples](./examples/)
 - [Http from scratch using TCP](./httpfromscratch/)
+- [Kafka](./kafka/)
+- [File Upload](./upload-file/)
