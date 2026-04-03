@@ -11,10 +11,6 @@ import (
 
 const uploadDir = "./upload/"
 
-func main() {
-
-}
-
 func HandleChunk(w http.ResponseWriter, r *http.Request) {
 	fileID := r.FormValue("fileID")
 	if strings.TrimSpace(fileID) == "" {
