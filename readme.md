@@ -8,5 +8,6 @@
 - [go examples](./examples/)
 - [Http from scratch using TCP](./httpfromscratch/)
 - [Kafka](./kafka/)
+- [Http Engine](./httpengine/)
 - [File Upload](./upload-file/)
 - [Streaming](./streaming/)
