@@ -2,6 +2,10 @@ package main
 
 import "fmt"
 
+// Time Complexity of Adding an element : O(1)
+// Time Complexity of Removing an element : O(1)
+// Time Complexity of Finding an element : O(N)
+
 type Stack struct {
 	top      int
 	capacity int
