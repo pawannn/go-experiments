@@ -22,19 +22,6 @@ func NewLinkedList() *LinkedList {
 	return &LinkedList{}
 }
 
-func (ll *LinkedList) AddNode(element int) {
-	if ll.Head == nil {
-		ll.Head = NewNode(element)
-	} else {
-		curr := ll.Head
-		for curr.Next != nil {
-			curr = curr.Next
-		}
-
-		curr.Next = NewNode(element)
-	}
-}
-
 func (ll *LinkedList) Print() {
 	curr := ll.Head
 	for curr != nil {
@@ -46,15 +33,22 @@ func (ll *LinkedList) Print() {
 func main() {
 	ll := NewLinkedList()
 
-	ll.AddNode(10)
-	ll.AddNode(20)
-	ll.AddNode(30)
-	ll.AddNode(40)
-	ll.AddNode(50)
-	ll.AddNode(60)
-	ll.AddNode(70)
-	ll.AddNode(80)
-	ll.AddNode(90)
+	ll.InsertRead(10)
+	ll.InsertRead(20)
+	ll.InsertRead(30)
+	ll.InsertRead(40)
+	ll.InsertRead(50)
+	ll.InsertRead(60)
+	ll.InsertRead(70)
+	ll.InsertRead(80)
+	ll.InsertRead(90)
+
+	ll.InsertFront(0)
+
+	ll.DeleteNode(90)
 
 	ll.Print()
+
+	idx := ll.SearchNode(40)
+	fmt.Println("The element 40 is in index position : ", idx)
 }
