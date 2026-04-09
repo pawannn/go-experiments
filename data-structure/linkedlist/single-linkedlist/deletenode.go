@@ -1,5 +1,9 @@
 package main
 
+// Time complexity for deleting A node:
+// Best case: The node is at index position 0 -> O(1)
+// Worst case: The node is at last position -> O(n)
+
 func (ll *LinkedList) DeleteNode(element int) {
 	curr := ll.Head
 
