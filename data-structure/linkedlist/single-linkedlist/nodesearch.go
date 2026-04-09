@@ -1,6 +1,6 @@
 package main
 
-// Time complexity for search A node:
+// Time complexity for searching A node:
 // Best case: The node will be found at index position 0 -> O(1)
 // Worst case: The node will be found at last position -> O(n)
 

@@ -2,7 +2,7 @@ package main
 
 // Time complexity for inserting element at the last:
 // Best case: The list is empty -> O(1)
-// Worst case: The list is not empty and node will be inserted at last -> O(1)
+// Worst case: The list is not empty and node will be inserted at last -> O(n)
 
 func (ll *LinkedList) InsertRead(element int) {
 	if ll.Head == nil {
