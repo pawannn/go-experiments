@@ -14,7 +14,7 @@ type Request struct {
 	ReqID string `json:"req_id"`
 }
 
-func SetContext(ctx context.Context) context.Context {
+func (e *HttpEngine) SetContext(ctx context.Context) context.Context {
 	reqID := uuid.New().String()
 	request := Request{
 		ReqID: reqID,
@@ -24,7 +24,7 @@ func SetContext(ctx context.Context) context.Context {
 	return c
 }
 
-func ParseContext(ctx context.Context) Request {
+func (e *HttpEngine) ParseContext(ctx context.Context) Request {
 	val := ctx.Value(RequestKey)
 	if val == nil {
 		return Request{}
