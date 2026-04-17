@@ -23,6 +23,8 @@ func main() {
 
 	lb := NewLoadBalancer(backends)
 
+	go healthCheck(lb)
+
 	log.Println("Load balancer running on :8080")
 	http.ListenAndServe(":8080", lb)
 }

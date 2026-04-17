@@ -1,15 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type LoadBalancer struct {
 	backends []*Backend
-	current  int
+	current  uint64
 	mu       sync.Mutex
 }
 
@@ -20,35 +21,45 @@ func NewLoadBalancer(backends []*Backend) *LoadBalancer {
 	}
 }
 
-func (lb *LoadBalancer) NextBackendServer() *Backend {
-	lb.mu.Lock()
-	defer lb.mu.Unlock()
-
+func (lb *LoadBalancer) NextBackend() *Backend {
 	n := len(lb.backends)
-	for range n {
-		lb.current = (lb.current + 1) % n
-		if lb.backends[lb.current].IsAlive() {
-			return lb.backends[lb.current]
+	for i := 0; i < n; i++ {
+		idx := atomic.AddUint64(&lb.current, 1) % uint64(n)
+		b := lb.backends[idx]
+		if b.IsAlive() {
+			return b
 		}
 	}
-
 	return nil
 }
 
 func (lb *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	backend := lb.NextBackendServer()
-
+	backend := lb.NextBackend()
 	if backend == nil {
-		http.Error(w, "service unavailable", http.StatusServiceUnavailable)
+		http.Error(w, "No backend available", http.StatusServiceUnavailable)
 		return
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(backend.url)
+	proxy := httputil.NewSingleHostReverseProxy(backend.URL)
+
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		fmt.Println("Backend error : ", backend.url)
 		backend.SetAlive(false)
-		http.Error(w, "service unavailable", http.StatusBadGateway)
+		http.Error(w, "Service unavailable", http.StatusServiceUnavailable)
 	}
 
 	proxy.ServeHTTP(w, r)
+}
+
+func healthCheck(lb *LoadBalancer) {
+	for {
+		for _, b := range lb.backends {
+			resp, err := http.Get(b.URL.String() + "/health")
+			if err != nil || resp.StatusCode != 200 {
+				b.SetAlive(false)
+				continue
+			}
+			b.SetAlive(true)
+		}
+		time.Sleep(10 * time.Second)
+	}
 }

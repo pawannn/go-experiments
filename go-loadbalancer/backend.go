@@ -6,9 +6,10 @@ import (
 )
 
 type Backend struct {
-	url   *url.URL
-	alive bool
-	mu    sync.Mutex
+	URL         *url.URL
+	Alive       bool
+	ActiveConns int64
+	mu          sync.RWMutex
 }
 
 func NewBackend(addr string) (*Backend, error) {
@@ -18,19 +19,19 @@ func NewBackend(addr string) (*Backend, error) {
 	}
 
 	return &Backend{
-		url:   url,
-		alive: true,
+		URL:   url,
+		Alive: true,
 	}, nil
 }
 
 func (b *Backend) SetAlive(alive bool) {
 	b.mu.Lock()
-	b.alive = alive
+	b.Alive = alive
 	b.mu.Unlock()
 }
 
 func (b *Backend) IsAlive() bool {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.alive
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.Alive
 }
