@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"net/http/httputil"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -11,7 +10,6 @@ import (
 type LoadBalancer struct {
 	backends []*Backend
 	current  uint64
-	mu       sync.Mutex
 }
 
 func NewLoadBalancer(backends []*Backend) *LoadBalancer {
@@ -23,7 +21,7 @@ func NewLoadBalancer(backends []*Backend) *LoadBalancer {
 
 func (lb *LoadBalancer) NextBackend() *Backend {
 	n := len(lb.backends)
-	for i := 0; i < n; i++ {
+	for range n {
 		idx := atomic.AddUint64(&lb.current, 1) % uint64(n)
 		b := lb.backends[idx]
 		if b.IsAlive() {
