@@ -11,3 +11,4 @@
 - [Streaming](./streaming/)
 - [File Upload](./upload-file/)
 - [Kafka](./kafka/)
+- [Data structures](./data-structure/)
