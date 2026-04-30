@@ -22,7 +22,7 @@ func printEven(ch chan int, done chan bool) {
 	done <- true
 }
 
-func main() {
+func startOddEvenChan() {
 	ch := make(chan int)
 	done := make(chan bool)
 
