@@ -55,7 +55,7 @@ func GetUnqueSums(nums []int) []int {
 	return resultSet
 }
 
-func main() {
+func FindUnqueSums() {
 	nums := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
 	sums := GetUnqueSums(nums)
 	fmt.Println(sums)
