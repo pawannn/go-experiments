@@ -25,7 +25,7 @@ func TaskWithContext(ctx context.Context, id int) error {
 	}
 }
 
-func main() {
+func startCtxTasks() {
 	g, ctx := errgroup.WithContext(context.Background())
 
 	for i := range 10 {
