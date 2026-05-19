@@ -20,22 +20,8 @@ type Task struct {
 }
 
 func (t *Task) ProcessTask(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-		log.Printf("task cancelled: %d\n", t.id)
-		return
-	default:
-	}
-
 	fmt.Println("completing task ID:", t.id, "task name:", t.name)
-
-	workTime := time.Millisecond * time.Duration(rand.Intn(90)+10)
-
-	select {
-	case <-ctx.Done():
-		log.Printf("task interrupted: %d\n", t.id)
-	case <-time.After(workTime):
-	}
+	time.Sleep(time.Millisecond * time.Duration(rand.Intn(90)+10))
 }
 
 type workerPool struct {
