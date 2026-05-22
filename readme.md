@@ -15,3 +15,4 @@
 - [pprof](./pprof/)
 - [OOPS](./oops/)
 - [Microservice Pattern](./microservices-pattern)
+- [error-groups](./errorgroups/)
