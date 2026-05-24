@@ -1,72 +1,102 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
-	"math/rand"
-	"net/http"
-	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"runtime"
 	"sync"
+	"syscall"
 	"time"
 )
 
 type Task struct {
-	id   int
-	name string
+	id int
 }
 
-func (t *Task) ProcessTask() {
-	fmt.Println("completing task ID : ", t.id, " task name : ", t.name)
-	workTime := time.Millisecond * time.Duration(rand.Intn(90)+10)
-	time.Sleep(workTime)
+func (t Task) Execute() {
+	fmt.Println(t.id)
+	time.Sleep(time.Second * 2)
 }
 
-type workerPool struct {
-	tasks       []Task
-	concurrency int
+type WorkerPool struct {
+	wg sync.WaitGroup
+
 	taskChan    chan Task
-	wg          sync.WaitGroup
+	concurrency int
 }
 
-func (wp *workerPool) worker() {
-	for task := range wp.taskChan {
-		task.ProcessTask()
-		wp.wg.Done()
+func NewWorkerPool(concurrency int) *WorkerPool {
+	return &WorkerPool{
+		taskChan:    make(chan Task, concurrency),
+		concurrency: concurrency,
 	}
 }
 
-func (wp *workerPool) Run() {
-	wp.taskChan = make(chan Task, wp.concurrency)
+func (wP *WorkerPool) Worker(ctx context.Context) {
+	defer wP.wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case t, ok := <-wP.taskChan:
+			if !ok {
+				return
+			}
+
+			t.Execute()
+		}
+	}
+}
+
+func (wp *WorkerPool) Start(ctx context.Context) {
 	for range wp.concurrency {
-		go wp.worker()
-	}
-
-	for _, task := range wp.tasks {
 		wp.wg.Add(1)
-		wp.taskChan <- task
+		go wp.Worker(ctx)
 	}
+}
 
+func (wp *WorkerPool) Submit(t Task) {
+	wp.taskChan <- t
+}
+
+func (wp *WorkerPool) Stop() {
 	close(wp.taskChan)
+}
+
+func (wp *WorkerPool) Wait() {
 	wp.wg.Wait()
 }
 
-func startWorkerPool() {
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
+
+	concurrency := runtime.NumCPU()
+	wp := NewWorkerPool(concurrency)
+
+	wp.Start(ctx)
+
 	go func() {
-		log.Println("pprof running on :6060")
-		log.Println(http.ListenAndServe(":6060", nil))
+		for i := range 30 {
+			t := Task{i + 1}
+			wp.Submit(t)
+		}
+
+		wp.Stop()
 	}()
 
-	n := 100000
-	tasks := make([]Task, n)
-	for i := range n {
-		tasks[i].id = i
-		tasks[i].name = "work" + fmt.Sprint(i)
-	}
+	go func() {
+		<-sigChan
+		fmt.Println("Termination signal recieved")
+		cancel()
+	}()
 
-	wp := workerPool{
-		tasks:       tasks,
-		concurrency: 10,
-	}
+	wp.Wait()
 
-	wp.Run()
+	fmt.Println("All Workers stopped")
 }
