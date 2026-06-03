@@ -59,7 +59,7 @@ func (oE *OddEven) Even(wg *sync.WaitGroup, limit int) {
 	}
 }
 
-func main() {
+func startOddEven() {
 	oE := OddEven{}
 	oE.cond = sync.NewCond(&oE.mu)
 
